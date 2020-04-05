@@ -1,0 +1,13 @@
+# Results from compiling Cython
+*.c
+*.h
+*.so
+*.html
+
+# Results from running Python
+*.pyc
+
+# Python folders
+__pycache__/
+build/
+dist/
