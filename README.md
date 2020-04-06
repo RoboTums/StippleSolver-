@@ -11,3 +11,6 @@
 3. Train a DCGAN (Deep Convolution Generative Adversarial Network) to create TSP art with a generative method. 
 
 
+# To build project:
+``` python3 setup.py build_ext --inplace ```
+
