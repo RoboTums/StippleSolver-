@@ -2,7 +2,7 @@ import setuptools
 from distutils.core import setup
 from Cython.Build import cythonize
 import numpy
-
+import PIL
 setup(
 	name="TSP ART",
     version="0.0.1",
@@ -17,5 +17,5 @@ setup(
 		,        
 	compiler_directives={'language_level': "3"}),
 	include_dirs=[numpy.get_include()],
-	install_requires=['numpy'] 
+	install_requires=['numpy','PIL'] 
 	)
