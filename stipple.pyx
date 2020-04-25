@@ -17,7 +17,7 @@ cpdef void py_stipple(str filename):
 	try:
 		image = np.array(Image.open('./'+filename),np.float)
 		feed_dict = {
-			'num_zones': 10,
+			'num_zones': 1,
 			'num_outer_iters':10,
 			'iter_multiple':1000,
 			'exp':1.3,
@@ -30,7 +30,7 @@ cpdef void py_stipple(str filename):
 			}
 
 		stipple(
-			image, 4000,feed_dict
+			image, 2048,feed_dict
 			)
 
 	except FileNotFoundError:
@@ -131,7 +131,7 @@ cdef void stipple(double[:,:] image, int num_dots, dict hyper_params):
 
 
 	#create initial collection of dots (Dart throwing phase of algorithm)
-
+	#print('zh',zone_size)
 	for k in range(num_dots):
 		rando = np.random.random()
 		r = 0
@@ -149,16 +149,18 @@ cdef void stipple(double[:,:] image, int num_dots, dict hyper_params):
 			else:
 				r += 1
 		#having found the correct r,c index of the dart, we add it to the right zone. 
-		row_z = np.int(r/zone_height)
-		col_z = np.int(c/zone_width) 
+		row_z = np.int(r//zone_height)
+		col_z = np.int(c//zone_width) 
 
 		#adjust postscript location of dots. 
 		x_dots[k] = c * PW + (PW * np.random.random())
 		y_dots[k] = (PW * rows - (r * PW)  ) - (PW * np.random.random())
 
 		#assign location of dot into zone.
-		zone_size[row_z][col_z] = zone_size[row_z][col_z] + 1
 		dots_in_zone[row_z][col_z][zone_size[row_z][col_z]] = k
+
+		zone_size[row_z][col_z] = zone_size[row_z][col_z] + 1
+
 		if zone_size[row_z][col_z] >= max_zone_size:
 			print(f"Warning: Zone {row_z} x {col_z} contains too many dots. ")
 			return
@@ -174,8 +176,8 @@ cdef void stipple(double[:,:] image, int num_dots, dict hyper_params):
 			dots_used[k] = 0
 		
 		for i in range(iterations):
-			if i % iter_multiple == 0:
-				print(f"work on outer iteration {oi} is {np.round((100*i)/(np.max(1,iterations-1),2) )} percent complete")
+			if i % 100000 == 0:
+				print(f"work on outer iteration {oi} is {np.round( ((100*i)/ iterations) ,2 )} percent complete")
 			rando = np.random.random()
 			r = 0
 
@@ -198,28 +200,28 @@ cdef void stipple(double[:,:] image, int num_dots, dict hyper_params):
 						continue_loop = False
 					else:
 						r += 1
-			print(f'gets to postscript location. ')
+		#	print(f'gets to postscript location. ')
 			#update postscript location
 			x_new = c * PW + (PW * np.random.random())
 			y_new = ((PW * rows) - (r * PW) ) - (PW * np.random.random()) 	
 			#update zones
-			row_z = np.int(r/zone_height)
-			col_z = np.int(c/zone_width)
+			row_z = np.int(r//zone_height)
+			col_z = np.int(c//zone_width)
 			#find zone specific maximums and minimas
-			row_z_lo = np.max(0 , row_z - 1) #floor at 0
-			row_z_hi = np.min(num_zones - 1, row_z + 1)
-			col_z_lo = np.max(0 , col_z - 1) #floor at 0
-			col_z_hi = np.min(num_zones - 1, col_z + 1)
+			row_z_lo = np.max([0 , row_z - 1]) #floor at 0
+			row_z_hi = np.min([num_zones - 1, row_z + 1])
+			col_z_lo = np.max([0 , col_z - 1]) #floor at 0
+			col_z_hi = np.min([num_zones - 1, col_z + 1])
 			arg_min = 0
 			min_dist = PW*rows+PW*columns #starts as maximum amount of pixels. 
 			#iterate through zone.
-			print(f'zone size:, {row_z_hi} , {col_z_hi}')
+			#print(f'zone size:, {row_z_hi} , {col_z_hi}')
 
 			for row_z in range(row_z_lo,row_z_hi,1):
 				for col_z in range(col_z_lo,col_z_hi,1):
-					print('is it the k loop?')
+					#print('is it the k loop?')
 					for k in range(zone_size[row_z][col_z]):
-						print(k)
+						#print(k)
 						dot = dots_in_zone[row_z][col_z][k]
 						dist = (x_dots[dot] - x_new) * (x_dots[dot] - x_new) - (y_dots[dot] - y_new)*(y_dots[dot] - y_new)
 						if dist < min_dist:
@@ -233,8 +235,20 @@ cdef void stipple(double[:,:] image, int num_dots, dict hyper_params):
 			dots_used[arg_min] += 1
 
 	
+#create TSP file.
+	print('creating .tsp file')
+	with open(hyper_params['filename'] + ".tsp", "w+") as f:
+		f.write('NAME : %s\n' % "Tumas Rackaitis")
+		f.write('COMMENT : %s\n' % "Math Art Project")
+		f.write('TYPE : TSP\n')
+		f.write('DIMENSION : %d\n' % num_dots)
+		f.write('EDGE_WEIGHT_TYPE : EUC_2D\n')
+		f.write('NODE_COORD_SECTION\n')		
+		for k in range(num_dots):
+			f.write(f'{k+1} {np.round(x_dots[k],10)} {np.round(y_dots[k], 10)}\n')
+		f.write('EOF\n')
 
-	#now we add the dots to the .dat file for the Concorde TSP solver. 
+	print('generated .tsp file')
 
 	#We create the Postscript file : filename.eps
 	print('creating postscript file...')
