@@ -53,3 +53,6 @@
 # To build project:
 ``` python3 setup.py build_ext --inplace ```
 
+# Example Stippling Usage:
+``` python3 generate.py poo.pgm ```
+
